@@ -1,45 +1,74 @@
 # SINTA Citation Finder
 
-Aplikasi Laravel sederhana untuk membantu menemukan **kandidat artikel dari jurnal terakreditasi SINTA** yang relevan dengan sebuah kalimat akademik. V1 ini **tidak menggunakan AI berbayar**. Pencarian dilakukan secara lokal dengan normalisasi teks, TF-IDF, cosine similarity, dan pembobotan field.
+SINTA Citation Finder adalah aplikasi berbasis Laravel untuk membantu mencari artikel dari jurnal terakreditasi SINTA yang relevan dengan suatu kalimat atau pernyataan akademik.
 
-> **Penting:** repository ini tidak menyertakan database penuh SINTA dan tidak melakukan scraping otomatis. Pengguna mengimpor corpus artikel yang telah diverifikasi melalui CSV. Data seeder bawaan seluruhnya diberi label `[DEMO]` dan bukan referensi akademik nyata.
+Pengguna cukup memasukkan sebuah kalimat, kemudian sistem akan mencari artikel yang paling relevan berdasarkan judul, kata kunci, dan abstrak yang tersedia pada corpus lokal.
 
-## Fitur V1
+Hasil pencarian menampilkan informasi seperti:
 
-- UI Bahasa Indonesia.
-- Input satu kalimat/pernyataan akademik.
-- Filter SINTA 1–6 dan tahun minimum.
-- Ranking relevansi artikel dengan TF-IDF + cosine similarity.
-- Bobot pencarian: judul ×3, kata kunci ×2, abstrak ×1.
-- Menampilkan penulis, tahun, judul, jurnal, level SINTA, URL/DOI, skor relevansi, istilah cocok, dan potongan abstrak yang paling relevan.
-- Impor corpus melalui CSV tanpa package tambahan.
-- Update otomatis jika judul yang sama di jurnal yang sama diimpor kembali.
-- Template CSV siap unduh.
-- Seeder demo untuk pengujian lokal.
-- SQLite default; kompatibel dengan MySQL.
-- Tidak membutuhkan Node/NPM karena antarmuka menggunakan Bootstrap CDN.
+* Nama penulis
+* Tahun publikasi
+* Judul artikel
+* Nama jurnal
+* Level SINTA
+* DOI atau URL artikel
+* Skor relevansi
+* Potongan abstrak yang relevan
+* Istilah atau konsep yang cocok
 
-## Mengapa tidak scraping SINTA otomatis?
+Aplikasi ini menggunakan pendekatan lexical ranking tanpa layanan AI berbayar.
 
-SINTA dipakai sebagai sumber verifikasi status jurnal, tetapi aplikasi portfolio sebaiknya tidak bergantung pada struktur HTML eksternal yang dapat berubah. Arsitektur corpus lokal membuat aplikasi reproducible, gratis, mudah di-clone, dan tidak mengharuskan pengguna melakukan scraping terhadap layanan pihak ketiga.
+## Teknologi
 
-Untuk penggunaan nyata, isi CSV dengan metadata artikel dan abstrak yang secara sah dapat kamu gunakan, kemudian pastikan `sinta_level` jurnal masih sesuai dengan status yang diverifikasi.
+* Laravel
+* Blade
+* Bootstrap
+* SQLite atau MySQL
+* Crossref API
+* TF-IDF / lexical similarity
 
 ## Instalasi
 
-Persyaratan:
-
-- PHP 8.2+
-- Composer
-- ekstensi PHP SQLite atau MySQL
+Clone repository:
 
 ```bash
-unzip sinta-citation-finder-v1.zip
+git clone https://github.com/surodipoikromo/sinta-citation-finder.git
 cd sinta-citation-finder
+```
+
+Install dependency:
+
+```bash
 composer install
+```
+
+Buat file konfigurasi:
+
+```bash
 cp .env.example .env
+```
+
+Generate application key:
+
+```bash
 php artisan key:generate
-php artisan migrate --seed
+```
+
+Jika menggunakan SQLite, buat file database:
+
+```bash
+touch database/database.sqlite
+```
+
+Kemudian jalankan migration:
+
+```bash
+php artisan migrate
+```
+
+Jalankan aplikasi:
+
+```bash
 php artisan serve
 ```
 
@@ -49,180 +78,51 @@ Buka:
 http://127.0.0.1:8000
 ```
 
-Seeder berisi enam artikel sintetis `[DEMO]` agar mesin pencari langsung dapat diuji.
+## Menambahkan Corpus
 
-Contoh pencarian demo:
+Corpus artikel dapat ditambahkan secara otomatis melalui command Laravel.
 
-```text
-Kualitas sistem berpengaruh terhadap kepuasan pengguna.
-```
-
-atau:
-
-```text
-Transformasi digital dapat meningkatkan efisiensi pelayanan publik.
-```
-
-## Menggunakan MySQL
-
-Ubah `.env`:
-
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=sinta_citation_finder
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-Lalu jalankan:
-
-```bash
-php artisan migrate --seed
-```
-
-## Format CSV
-
-Kolom wajib:
-
-```text
-authors,title,journal,sinta_level,abstract
-```
-
-Kolom opsional:
-
-```text
-year,url,doi,keywords,subject_area,issn,eissn,journal_url
-```
-
-Contoh tersedia di `database/sample_corpus.csv` dan tombol **Unduh Template CSV** pada halaman Korpus.
-
-## Cara kerja ranking
-
-1. Query dinormalisasi menjadi token penting.
-2. Stopword Indonesia dan Inggris dibuang.
-3. Dokumen dibentuk dari `title`, `keywords`, dan `abstract`.
-4. Title dimasukkan tiga kali dan keyword dua kali untuk memberi bobot lebih tinggi.
-5. IDF dihitung terhadap corpus yang sedang difilter.
-6. Query dan dokumen diubah menjadi vektor TF-IDF.
-7. Cosine similarity dihitung dan dikonversi menjadi skor 0–100%.
-8. Kalimat abstrak dengan jumlah istilah query paling banyak dipilih sebagai potongan teks relevan.
-
-Implementasi utama ada pada:
-
-```text
-app/Services/CitationSearchService.php
-```
-
-## Batasan V1
-
-- Tidak melakukan semantic embedding/LLM.
-- Sinonim yang berbeda jauh secara leksikal dapat terlewat.
-- Stemming Bahasa Indonesia belum digunakan.
-- Status SINTA tidak diperbarui otomatis.
-- Relevant excerpt berasal dari abstrak corpus, bukan otomatis dari PDF penuh.
-- Skor relevansi bukan validasi bahwa artikel mendukung klaim pengguna.
-
-## Etika penggunaan akademik
-
-Aplikasi ini adalah **discovery tool**, bukan generator sumber. Selalu buka artikel asli dan verifikasi bahwa isi penelitian memang mendukung pernyataan yang akan ditulis. Jangan menjadikan skor relevansi atau potongan abstrak sebagai pengganti membaca sumber.
-
-## Testing
-
-Setelah dependency terpasang:
-
-```bash
-php artisan test
-```
-
-Tes meliputi halaman pencarian, ranking artikel yang cocok, dan filter level SINTA.
-
-## Struktur penting
-
-```text
-app/Services/CitationSearchService.php
-app/Services/CorpusImportService.php
-app/Http/Controllers/SearchController.php
-app/Http/Controllers/CorpusController.php
-database/migrations/
-database/seeders/DatabaseSeeder.php
-resources/views/search.blade.php
-resources/views/corpus/index.blade.php
-```
-
-## Lisensi
-
-MIT.
-
-## V1.1 — Importer / Crawler Corpus
-
-V1.1 menambahkan pipeline corpus otomatis tanpa AI berbayar:
-
-```text
-SINTA journal directory
-        ↓
-name + SINTA level + ISSN
-        ↓
-Crossref REST API (/journals/{issn}/works)
-        ↓
-article metadata + abstract (jika tersedia)
-        ↓
-local Laravel corpus
-        ↓
-TF-IDF + cosine similarity search
-```
-
-### Bootstrap corpus otomatis
-
-Setelah migration:
+Untuk mengambil daftar jurnal SINTA dan artikel terkait:
 
 ```bash
 php artisan corpus:bootstrap --pages=3 --journals=20 --per-journal=100
 ```
 
-Command tersebut setara dengan:
+Contoh untuk corpus yang lebih besar:
 
 ```bash
-php artisan sinta:discover --pages=3
-php artisan corpus:sync --journals=20 --per-journal=100
+php artisan corpus:bootstrap --pages=10 --journals=100 --per-journal=200
 ```
 
-Contoh hanya SINTA 2 dan artikel 2022 ke atas:
+Corpus juga dapat diperluas tanpa menghapus data yang sudah ada:
+
+```bash
+php artisan corpus:sync --journals=100 --per-journal=200
+```
+
+Jika hanya ingin memperbarui daftar jurnal SINTA:
+
+```bash
+php artisan sinta:discover --pages=10
+```
+
+Kemudian sinkronkan artikelnya:
+
+```bash
+php artisan corpus:sync --journals=100 --per-journal=200
+```
+
+Untuk membatasi berdasarkan level SINTA:
 
 ```bash
 php artisan sinta:discover --pages=10 --level=2
-php artisan corpus:sync --level=2 --journals=50 --per-journal=200 --from-year=2022
+php artisan corpus:sync --level=2 --journals=100 --per-journal=200
 ```
 
-### Konfigurasi yang direkomendasikan
+Data artikel diperoleh dari metadata publik yang tersedia melalui Crossref dan sumber jurnal terkait. Tidak semua artikel memiliki abstrak lengkap, sehingga kualitas hasil pencarian dapat dipengaruhi oleh kelengkapan metadata pada corpus.
 
-Isi email pada `.env` agar request Crossref masuk *polite pool*:
+Semakin besar dan beragam corpus, semakin baik peluang sistem menemukan artikel yang relevan.
 
-```env
-CROSSREF_MAILTO=nama@example.com
-```
+## Catatan
 
-Jeda default crawler SINTA adalah 1200 ms per halaman dan Crossref 250 ms per page. Nilainya dapat diubah melalui `.env`.
-
-### Catatan sumber data
-
-- SINTA dipakai untuk menemukan jurnal, ISSN, dan level akreditasi.
-- Crossref dipakai untuk mengambil metadata artikel berdasarkan ISSN.
-- Tidak semua record Crossref mempunyai abstrak. Record tanpa abstrak tetap dapat ditemukan dari judul/subject, tetapi tidak menghasilkan potongan abstrak yang kaya.
-- Struktur HTML SINTA dapat berubah. `SintaJournalCrawler` sengaja dibuat terpisah dari mesin pencari agar parser dapat diperbarui tanpa mengubah search engine.
-- CSV importer tetap tersedia sebagai fallback dan untuk corpus terkurasi.
-- Sebelum mengutip, selalu buka artikel asli dan verifikasi isi, penulis, tahun, DOI, serta status SINTA jurnal.
-
-### Artisan commands
-
-| Command | Fungsi |
-|---|---|
-| `sinta:discover` | Crawl daftar jurnal SINTA publik |
-| `corpus:sync` | Sinkronkan artikel via Crossref berdasarkan ISSN |
-| `corpus:bootstrap` | Menjalankan discovery + sync sekaligus |
-
-
-## Ranking pencarian v1.2
-
-Mesin pencarian tidak lagi hanya menghitung kemunculan kata tunggal. Query dipecah menjadi istilah dan frasa konsep. Contoh `Kualitas sistem berpengaruh terhadap kepuasan pengguna` diperlakukan sebagai konsep `kualitas sistem` dan `kepuasan pengguna`; kata relasional seperti `berpengaruh` diberi prioritas rendah/dibuang. Ranking menggabungkan kecocokan istilah berbobot IDF, phrase/ngram matching, cakupan konsep, serta bobot field (judul > kata kunci > abstrak). Pendekatan ini tetap sepenuhnya lokal dan tidak menggunakan AI/API berbayar.
+SINTA Citation Finder digunakan sebagai alat bantu pencarian referensi. Hasil pencarian dan skor relevansi bukan pengganti proses membaca dan memverifikasi artikel asli sebelum digunakan sebagai sitasi akademik.
