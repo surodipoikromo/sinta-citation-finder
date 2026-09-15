@@ -16,7 +16,7 @@ Hasil pencarian menampilkan informasi seperti:
 * Potongan abstrak yang relevan
 * Istilah atau konsep yang cocok
 
-Aplikasi ini menggunakan pendekatan lexical ranking tanpa layanan AI berbayar.
+Aplikasi ini menggunakan pendekatan lexical ranking.
 
 ## Teknologi
 
